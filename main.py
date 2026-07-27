@@ -1,5 +1,4 @@
 import time
-import sys
 import requests
 import pandas as pd
 import yfinance as yf
@@ -22,11 +21,11 @@ def calculate_macd(series, fast, slow, signal):
     histogram = macd_line - signal_line
     return macd_line, signal_line, histogram
 
-print("ربات ترید طلا روشن شد و آنلاین ماند...", flush=True)
+print("ربات ترید طلا روشن شد...", flush=True)
 
 while True:
     try:
-        print("در حال بررسی کندل‌ها...", flush=True)
+        print("در حال بررسی بازار طلا...", flush=True)
         df = yf.download(tickers="GC=F", interval="15m", period="2d", progress=False)
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.get_level_values(0)
