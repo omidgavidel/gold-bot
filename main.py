@@ -39,10 +39,7 @@ def check_strategy():
 
     close = df['Close']
 
-    # مک‌دی دیفالت (۱۲، ۲۶، ۹)
     macd_def, sig_def, hist_def = calculate_macd(close, 12, 26, 9)
-    
-    # مک‌دی ۴ برابر (۴۸، ۱۰۴، ۳۶)
     macd_4x, sig_4x, hist_4x = calculate_macd(close, 48, 104, 36)
     
     df['macd_4x'] = macd_4x
@@ -74,10 +71,11 @@ def check_strategy():
         
     return None
 
-print("ربات هوشمند ترید طلا (XAUUSD) بدون خطا اجرا شد...")
+print("ربات هوشمند ترید طلا (XAUUSD) با موفقیت روشن شد و در حال رصد بازار است...")
 
 while True:
     try:
+        print("در حال بررسی وضعیت بازار طلا...")
         signal = check_strategy()
         
         if signal == "BUY":
