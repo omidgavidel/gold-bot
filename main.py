@@ -21,6 +21,8 @@ def send_telegram_message(token, chat_id, message):
 
 def get_data():
     df = yf.download(tickers="GC=F", interval="15m", period="5d")
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = df.columns.get_level_values(0)
     return df
 
 def check_strategy():
@@ -28,30 +30,26 @@ def check_strategy():
     if df.empty or len(df) < 120:
         return None
 
+    # محاسبه مک‌دی‌ها با فرمت استاندارد کتابخانه
     macd_def = ta.macd(df['Close'], fast=12, slow=26, signal=9)
     macd_4x = ta.macd(df['Close'], fast=48, slow=104, signal=36)
     
     df = pd.concat([df, macd_def, macd_4x], axis=1)
     
-    # پیدا کردن خودکار نام ستون‌ها بر اساس خروجی واقعی کتابخانه
-    cols = df.columns.tolist()
-    macd_4x_col = [c for c in cols if 'MACD_' in c and '48' in c and '104' in c and not 's' in c and not 'h' in c][0]
-    macds_4x_col = [c for c in cols if 'MACDs_' in c and '48' in c][0]
-    macdh_def_col = [c for c in cols if 'MACDh_' in c and '12' in c][0]
-
     curr = df.iloc[-2]
     prev = df.iloc[-3]
     
-    m4_line_prev = prev[macd_4x_col]
-    m4_sig_prev  = prev[macds_4x_col]
-    m4_line_curr = curr[macd_4x_col]
-    m4_sig_curr  = curr[macds_4x_col]
+    # استفاده از نام‌های استاندارد خروجی pandas_ta
+    m4_line_prev = prev['MACD_48_104_36']
+    m4_sig_prev  = prev['MACDs_48_104_36']
+    m4_line_curr = curr['MACD_48_104_36']
+    m4_sig_curr  = curr['MACDs_48_104_36']
     
     bullish_cross_4x = (m4_line_prev <= m4_sig_prev) and (m4_line_curr > m4_sig_curr)
     bearish_cross_4x = (m4_line_prev >= m4_sig_prev) and (m4_line_curr < m4_sig_curr)
     
-    hist_prev = prev[macdh_def_col]
-    hist_curr = curr[macdh_def_col]
+    hist_prev = prev['MACDh_12_26_9']
+    hist_curr = curr['MACDh_12_26_9']
     
     is_first_negative_bar = (hist_curr < 0) and (hist_prev >= 0)
     is_first_positive_bar = (hist_curr > 0) and (hist_prev <= 0)
@@ -64,7 +62,7 @@ def check_strategy():
         
     return None
 
-print("ربات هوشمند ترید طلا (XAUUSD) آپدیت شد و در حال اجراست...")
+print("ربات هوشمند ترید طلا (XAUUSD) با موفقیت اجرا شد...")
 
 while True:
     try:
