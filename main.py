@@ -1,7 +1,6 @@
 import time
 import requests
 import pandas as pd
-import pandas_ta as ta
 import yfinance as yf
 
 TOKEN = "8724005712:AAHrzvK6BWNKkCx-JZkyqpZpQpvRnFKkybE"
@@ -25,43 +24,44 @@ def get_data():
         df.columns = df.columns.get_level_values(0)
     return df
 
+def calculate_macd(series, fast, slow, signal):
+    ema_fast = series.ewm(span=fast, adjust=False).mean()
+    ema_slow = series.ewm(span=slow, adjust=False).mean()
+    macd_line = ema_fast - ema_slow
+    signal_line = macd_line.ewm(span=signal, adjust=False).mean()
+    histogram = macd_line - signal_line
+    return macd_line, signal_line, histogram
+
 def check_strategy():
     df = get_data()
     if df.empty or len(df) < 150:
         return None
 
-    # محاسبه مک‌دی‌ها
-    macd_def = ta.macd(df['Close'], fast=12, slow=26, signal=9)
-    macd_4x = ta.macd(df['Close'], fast=48, slow=104, signal=36)
+    close = df['Close']
+
+    # مک‌دی دیفالت (۱۲، ۲۶، ۹)
+    macd_def, sig_def, hist_def = calculate_macd(close, 12, 26, 9)
     
-    if macd_def is None or macd_4x is None:
-        return None
-        
-    df = pd.concat([df, macd_def, macd_4x], axis=1)
+    # مک‌دی ۴ برابر (۴۸، ۱۰۴، ۳۶)
+    macd_4x, sig_4x, hist_4x = calculate_macd(close, 48, 104, 36)
     
-    # استخراج پویا و امن نام ستون‌ها بر اساس مقادیر موجود در دیتافریم
-    cols = df.columns.tolist()
-    
-    try:
-        col_m4_line = [c for c in cols if c.startswith('MACD_') and '48' in c][0]
-        col_m4_sig  = [c for c in cols if c.startswith('MACDs_') and '48' in c][0]
-        col_hist_def = [c for c in cols if c.startswith('MACDh_') and '12' in c][0]
-    except Exception:
-        return None
+    df['macd_4x'] = macd_4x
+    df['sig_4x'] = sig_4x
+    df['hist_def'] = hist_def
 
     curr = df.iloc[-2]
     prev = df.iloc[-3]
     
-    m4_line_prev = prev[col_m4_line]
-    m4_sig_prev  = prev[col_m4_sig]
-    m4_line_curr = curr[col_m4_line]
-    m4_sig_curr  = curr[col_m4_sig]
+    m4_line_prev = prev['macd_4x']
+    m4_sig_prev  = prev['sig_4x']
+    m4_line_curr = curr['macd_4x']
+    m4_sig_curr  = curr['sig_4x']
     
     bullish_cross_4x = (m4_line_prev <= m4_sig_prev) and (m4_line_curr > m4_sig_curr)
     bearish_cross_4x = (m4_line_prev >= m4_sig_prev) and (m4_line_curr < m4_sig_curr)
     
-    hist_prev = prev[col_hist_def]
-    hist_curr = curr[col_hist_def]
+    hist_prev = prev['hist_def']
+    hist_curr = curr['hist_def']
     
     is_first_negative_bar = (hist_curr < 0) and (hist_prev >= 0)
     is_first_positive_bar = (hist_curr > 0) and (hist_prev <= 0)
@@ -74,7 +74,7 @@ def check_strategy():
         
     return None
 
-print("ربات هوشمند ترید طلا (XAUUSD) با موفقیت اجرا شد...")
+print("ربات هوشمند ترید طلا (XAUUSD) بدون خطا اجرا شد...")
 
 while True:
     try:
