@@ -1,4 +1,5 @@
 import time
+import sys
 import requests
 import pandas as pd
 import yfinance as yf
@@ -21,17 +22,17 @@ def calculate_macd(series, fast, slow, signal):
     histogram = macd_line - signal_line
     return macd_line, signal_line, histogram
 
-print("ربات روشن شد.")
+print("ربات ترید طلا روشن شد و آنلاین ماند...", flush=True)
 
 while True:
     try:
+        print("در حال بررسی کندل‌ها...", flush=True)
         df = yf.download(tickers="GC=F", interval="15m", period="2d", progress=False)
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.get_level_values(0)
             
         if len(df) > 100:
             close = df['Close']
-            
             _, _, hist_def = calculate_macd(close, 12, 26, 9)
             macd_4x, sig_4x, _ = calculate_macd(close, 48, 104, 36)
             
@@ -51,11 +52,14 @@ while True:
             
             if bullish:
                 send_telegram_message("🟢 سیگنال خرید طلا (XAUUSD)\n- تایم‌فریم: ۱۵ دقیقه\n- مک‌دی ۴ برابر کراس صعودی داد.\n- اولین میله مک‌دی دیفالت در ناحیه زیر صفر کامل شد.")
+                print("سیگنال خرید ارسال شد.", flush=True)
                 time.sleep(900)
             elif bearish:
                 send_telegram_message("🔴 سیگنال فروش طلا (XAUUSD)\n- تایم‌فریم: ۱۵ دقیقه\n- مک‌دی ۴ برابر کراس نزولی داد.\n- اولین میله مک‌دی دیفالت در ناحیه بالای صفر کامل شد.")
+                print("سیگنال فروش ارسال شد.", flush=True)
                 time.sleep(900)
                 
         time.sleep(60)
-    except Exception:
+    except Exception as e:
+        print(f"خطا: {e}", flush=True)
         time.sleep(60)
