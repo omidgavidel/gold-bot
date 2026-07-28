@@ -13,6 +13,15 @@ def send_telegram_message(message):
     except Exception:
         pass
 
+try:
+    print("شروع اجرای برنامه...", flush=True)
+    # تست دریافت دیتا برای اطمینان از سلامت اتصال
+    df_test = yf.download(tickers="GC=F", interval="15m", period="1d", progress=False)
+    print(f"تست موفق دیتا، تعداد سطرها: {len(df_test)}", flush=True)
+except Exception as e:
+    send_telegram_message(f"🚨 خطای بحرانی در شروع ربات: {e}")
+    print(f"خطای بحرانی: {e}", flush=True)
+
 def calculate_macd(series, fast, slow, signal):
     ema_fast = series.ewm(span=fast, adjust=False).mean()
     ema_slow = series.ewm(span=slow, adjust=False).mean()
