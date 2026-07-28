@@ -21,11 +21,13 @@ def calculate_macd(series, fast, slow, signal):
     histogram = macd_line - signal_line
     return macd_line, signal_line, histogram
 
-print("ربات ترید طلا روشن شد...", flush=True)
+print("ربات رصد طلا با منطق جدید روشن شد...", flush=True)
+
+# متغیری برای اینکه برای یک کراس، تکراری پیام نفرستد
+last_signal_time = None
 
 while True:
     try:
-        print("در حال بررسی بازار طلا...", flush=True)
         df = yf.download(tickers="GC=F", interval="15m", period="2d", progress=False)
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.get_level_values(0)
@@ -35,29 +37,41 @@ while True:
             _, _, hist_def = calculate_macd(close, 12, 26, 9)
             macd_4x, sig_4x, _ = calculate_macd(close, 48, 104, 36)
             
-            curr = df.iloc[-2]
-            prev = df.iloc[-3]
+            # بررسی کندل‌های آخر (در حال بسته شدن و بسته شده)
+            curr = df.iloc[-2] # کندل تازه بسته شده
+            prev = df.iloc[-3] # کندل ماقبل آخر
             
-            m4_prev = prev.get('macd_4x', macd_4x.iloc[-3])
-            s4_prev = prev.get('sig_4x', sig_4x.iloc[-3])
-            m4_curr = curr.get('macd_4x', macd_4x.iloc[-2])
-            s4_curr = curr.get('sig_4x', sig_4x.iloc[-2])
+            # مقادیر مک‌دی ۴ برابر
+            m4_curr = macd_4x.iloc[-2]
+            s4_curr = sig_4x.iloc[-2]
             
-            h_prev = prev.get('hist_def', hist_def.iloc[-3])
-            h_curr = curr.get('hist_def', hist_def.iloc[-2])
+            # مقادیر هیستوگرام مک‌دی دیفالت برای تشخیص اولین میله منفی
+            h_curr = hist_def.iloc[-2]
+            h_prev = hist_def.iloc[-3]
             
-            bullish = (m4_prev <= s4_prev) and (m4_curr > s4_curr) and (h_curr < 0) and (h_prev >= 0)
-            bearish = (m4_prev >= s4_prev) and (m4_curr < s4_curr) and (h_curr > 0) and (h_prev <= 0)
+            # شرط صعودی بودن مک‌دی 4 برابر (خط مک‌دی بالاتر از سیگنال باشد)
+            is_4x_bullish = m4_curr > s4_curr
             
-            if bullish:
-                send_telegram_message("🟢 سیگنال خرید طلا (XAUUSD)\n- تایم‌فریم: ۱۵ دقیقه\n- مک‌دی ۴ برابر کراس صعودی داد.\n- اولین میله مک‌دی دیفالت در ناحیه زیر صفر کامل شد.")
-                print("سیگنال خرید ارسال شد.", flush=True)
-                time.sleep(900)
-            elif bearish:
-                send_telegram_message("🔴 سیگنال فروش طلا (XAUUSD)\n- تایم‌فریم: ۱۵ دقیقه\n- مک‌دی ۴ برابر کراس نزولی داد.\n- اولین میله مک‌دی دیفالت در ناحیه بالای صفر کامل شد.")
-                print("سیگنال فروش ارسال شد.", flush=True)
-                time.sleep(900)
-                
+            # شرط اولین میله منفی مک‌دی دیفالت: کندل قبل مثبت یا صفر بوده، کندل فعلی منفی شده
+            is_first_negative_bar = (h_curr < 0) and (h_prev >= 0)
+            
+            # شرط اولین میله مثبت مک‌دی دیفالت (برای فروش): کندل قبل منفی یا صفر بوده، کندل فعلی مثبت شده
+            is_first_positive_bar = (h_curr > 0) and (h_prev <= 0)
+            
+            current_time_label = df.index[-2]
+            
+            if is_4x_bullish and is_first_negative_bar:
+                if last_signal_time != current_time_label:
+                    send_telegram_message("🟢 سیگنال خرید طلا (XAUUSD)\n- تایم‌فریم: ۱۵ دقیقه\n- مک‌دی ۴ برابر در حالت صعودی قرار دارد.\n- اولین میله مک‌دی دیفالت در ناحیه زیر صفر کامل بسته شد.")
+                    print("سیگنال خرید ارسال شد.", flush=True)
+                    last_signal_time = current_time_label
+                    
+            elif (m4_curr < s4_curr) and is_first_positive_bar:
+                if last_signal_time != current_time_label:
+                    send_telegram_message("🔴 سیگنال فروش طلا (XAUUSD)\n- تایم‌فریم: ۱۵ دقیقه\n- مک‌دی ۴ برابر در حالت نزولی قرار دارد.\n- اولین میله مک‌دی دیفالت در ناحیه بالای صفر کامل بسته شد.")
+                    print("سیگنال فروش ارسال شد.", flush=True)
+                    last_signal_time = current_time_label
+                    
         time.sleep(60)
     except Exception as e:
         print(f"خطا: {e}", flush=True)
