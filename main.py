@@ -21,20 +21,21 @@ def calculate_macd(series, fast, slow, signal):
     histogram = macd_line - signal_line
     return macd_line, signal_line, histogram
 
-print("ربات با سیستم ضد-کراس و نگهبان نهایی استارت شد...", flush=True)
+print("ربات در سبک‌ترین حالت ممکن استارت شد...", flush=True)
+send_telegram_message("🟢 **ربات ترید طلا در نسخه فوق‌العاده پایدار روشن شد.**")
 
 last_signal_time = None
 
 while True:
     try:
-        # دانلود ایمن داده با حداقل حجم برای جلوگیری از بسته شدن توسط سرور
-        df = yf.download(tickers="GC=F", interval="15m", period="1d", progress=False, threads=False, auto_adjust=True)
+        # درخواست بسیار سبک با period کوتاه برای جلوگیری از اشغال رم
+        df = yf.download(tickers="GC=F", interval="15m", period="1d", progress=False, threads=False)
         
         if df is not None and not df.empty:
             if isinstance(df.columns, pd.MultiIndex):
                 df.columns = df.columns.get_level_values(0)
                 
-            if len(df) > 30:
+            if len(df) > 20:
                 close = df['Close']
                 
                 _, _, hist_def = calculate_macd(close, 12, 26, 9)
@@ -66,10 +67,9 @@ while True:
                         print("سیگنال فروش ارسال شد.", flush=True)
                         last_signal_time = current_time_label
                         
-        print("بررسی انجام شد. ۶۰ ثانیه استراحت...", flush=True)
+        print("بررسی انجام شد. استراحت...", flush=True)
         time.sleep(60)
         
-    except BaseException as e:
-        # گیر انداختن مطلقاً هر نوع خطایی حتی خطاهای سیستمی پایتون برای جلوگیری از Stopping Container
-        print(f"خطای بحرانی هندل شد: {e}", flush=True)
+    except Exception as e:
+        print(f"خطا: {e}", flush=True)
         time.sleep(60)
