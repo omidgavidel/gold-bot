@@ -21,54 +21,55 @@ def calculate_macd(series, fast, slow, signal):
     histogram = macd_line - signal_line
     return macd_line, signal_line, histogram
 
-print("ربات با اصلاح دقیق منطق کندل‌ها استارت شد...", flush=True)
-send_telegram_message("🟢 ربات ترید طلا با منطق دقیقِ تطبیق با تریدینگ‌ویو روشن شد.")
+print("ربات با سیستم محافظ ضد-کرش استارت شد...", flush=True)
+send_telegram_message("🟢 ربات ترید طلا با سیستم محافظ ضد-کرش روشن شد.")
 
 last_signal_time = None
 
 while True:
     try:
+        print("در حال بررسی بازار طلا...", flush=True)
         df = yf.download(tickers="GC=F", interval="15m", period="1d", progress=False, threads=False)
         
-        if isinstance(df.columns, pd.MultiIndex):
-            df.columns = df.columns.get_level_values(0)
-            
-        if df is not None and len(df) > 30:
-            close = df['Close']
-            
-            _, _, hist_def = calculate_macd(close, 12, 26, 9)
-            macd_4x, sig_4x, _ = calculate_macd(close, 48, 104, 36)
-            
-            # بررسی دقیق کندل بسته شده (iloc[-2]) و کندل ماقبل آن (iloc[-3])
-            h_curr = hist_def.iloc[-2]
-            h_prev = hist_def.iloc[-3]
-            
-            m4_curr = macd_4x.iloc[-2]
-            s4_curr = sig_4x.iloc[-2]
-            
-            is_4x_bullish = m4_curr > s4_curr
-            is_4x_bearish = m4_curr < s4_curr
-            
-            # اصلاح شرط عبور از خط صفر برای تشخیص دقیق اولین میله
-            is_first_negative_bar = (h_curr < 0) and (h_prev > 0 or abs(h_prev) < 0.0001)
-            is_first_positive_bar = (h_curr > 0) and (h_prev < 0 or abs(h_prev) < 0.0001)
-            
-            current_time_label = str(df.index[-2])
-            
-            if is_4x_bullish and is_first_negative_bar:
-                if last_signal_time != current_time_label:
-                    send_telegram_message("🟢 سیگنال خرید طلا (XAUUSD)\n- تایم‌فریم: ۱۵ دقیقه\n- مک‌دی ۴ برابر: صعودی\n- مک‌دی دیفالت: اولین میله زیر صفر کامل بسته شد.")
-                    print("سیگنال خرید ارسال شد.", flush=True)
-                    last_signal_time = current_time_label
-                    
-            elif is_4x_bearish and is_first_positive_bar:
-                if last_signal_time != current_time_label:
-                    send_telegram_message("🔴 سیگنال فروش طلا (XAUUSD)\n- تایم‌فریم: ۱۵ دقیقه\n- مک‌دی ۴ برابر: نزولی\n- مک‌دی دیفالت: اولین میله بالای صفر کامل بسته شد.")
-                    print("سیگنال فروش ارسال شد.", flush=True)
-                    last_signal_time = current_time_label
-                    
+        if df is not None and not df.empty:
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = df.columns.get_level_values(0)
+                
+            if len(df) > 30:
+                close = df['Close']
+                
+                _, _, hist_def = calculate_macd(close, 12, 26, 9)
+                macd_4x, sig_4x, _ = calculate_macd(close, 48, 104, 36)
+                
+                h_curr = float(hist_def.iloc[-2])
+                h_prev = float(hist_def.iloc[-3])
+                
+                m4_curr = float(macd_4x.iloc[-2])
+                s4_curr = float(sig_4x.iloc[-2])
+                
+                is_4x_bullish = m4_curr > s4_curr
+                is_4x_bearish = m4_curr < s4_curr
+                
+                is_first_negative_bar = (h_curr < 0) and (h_prev > 0 or abs(h_prev) < 0.0001)
+                is_first_positive_bar = (h_curr > 0) and (h_prev < 0 or abs(h_prev) < 0.0001)
+                
+                current_time_label = str(df.index[-2])
+                
+                if is_4x_bullish and is_first_negative_bar:
+                    if last_signal_time != current_time_label:
+                        send_telegram_message("🟢 سیگنال خرید طلا (XAUUSD)\n- تایم‌فریم: ۱۵ دقیقه\n- مک‌دی ۴ برابر: صعودی\n- مک‌دی دیفالت: اولین میله زیر صفر کامل بسته شد.")
+                        print("سیگنال خرید ارسال شد.", flush=True)
+                        last_signal_time = current_time_label
+                        
+                elif is_4x_bearish and is_first_positive_bar:
+                    if last_signal_time != current_time_label:
+                        send_telegram_message("🔴 سیگنال فروش طلا (XAUUSD)\n- تایم‌فریم: ۱۵ دقیقه\n- مک‌دی ۴ برابر: نزولی\n- مک‌دی دیفالت: اولین میله بالای صفر کامل بسته شد.")
+                        print("سیگنال فروش ارسال شد.", flush=True)
+                        last_signal_time = current_time_label
+                        
+        print("بررسی انجام شد. ۶۰ ثانیه استراحت...", flush=True)
         time.sleep(60)
         
     except Exception as e:
-        print(f"خطا: {e}", flush=True)
+        print(f"خطای مدیریت شده (برنامه متوقف نمیشود): {e}", flush=True)
         time.sleep(60)
