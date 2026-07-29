@@ -21,14 +21,13 @@ def calculate_macd(series, fast, slow, signal):
     histogram = macd_line - signal_line
     return macd_line, signal_line, histogram
 
-print("ربات با اصلاح دقیق جایگاه مک‌دی‌ها (بالا ۴برابر، پایین دیفالت) استارت شد...", flush=True)
-send_telegram_message("🟢 **ربات ترید طلا با چیدمان صحیح مک‌دی‌ها روشن شد.**")
+print("ربات با استراتژی دقیقِ کراس ۴برابر و اولین میله دیفالت استارت شد...", flush=True)
 
 last_signal_time = None
 
 while True:
     try:
-        df = yf.download(tickers="GC=F", interval="15m", period="1d", progress=False, threads=False)
+        df = yf.download(tickers="GC=F", interval="15m", period="2d", progress=False, threads=False, auto_adjust=True)
         
         if df is not None and not df.empty:
             if isinstance(df.columns, pd.MultiIndex):
@@ -37,23 +36,26 @@ while True:
             if len(df) > 30:
                 close = df['Close']
                 
-                # مک‌دی پایین: دیفالت (12, 26, 9)
+                # مک‌دی دیفالت (پایینی)
                 _, _, hist_def = calculate_macd(close, 12, 26, 9)
                 
-                # مک‌دی بالا: ۴ برابر (48, 104, 36)
+                # مک‌دی ۴ برابر (بالایی)
                 macd_4x, sig_4x, _ = calculate_macd(close, 48, 104, 36)
                 
-                # بررسی میله‌های مک‌دی پایینی (دیفالت)
+                # بررسی میله‌های مک‌دی دیفالت روی کندل بسته شده
                 h_curr = float(hist_def.iloc[-2])
                 h_prev = float(hist_def.iloc[-3])
                 
-                # بررسی مک‌دی بالایی (۴ برابر)
+                # بررسی کراس در مک‌دی ۴ برابر
                 m4_curr = float(macd_4x.iloc[-2])
                 s4_curr = float(sig_4x.iloc[-2])
+                m4_prev = float(macd_4x.iloc[-3])
+                s4_prev = float(sig_4x.iloc[-3])
                 
-                # مک‌دی ۴ برابر صعودی یا نزولی
-                is_4x_bullish = m4_curr > s4_curr
-                is_4x_bearish = m4_curr < s4_curr
+                # کراس صعودی یا قرار داشتن در روند صعودی مک‌دی ۴ برابر
+                is_4x_bullish_cross = (m4_curr > s4_curr)
+                # کراس نزولی یا قرار داشتن در روند نزولی مک‌دی ۴ برابر
+                is_4x_bearish_cross = (m4_curr < s4_curr)
                 
                 # مک‌دی دیفالت: عبور از خط صفر و بسته شدن اولین میله
                 is_first_negative_bar = (h_curr < 0) and (h_prev >= 0)
@@ -61,17 +63,17 @@ while True:
                 
                 current_time_label = str(df.index[-2])
                 
-                # سناریو خرید
-                if is_4x_bullish and is_first_negative_bar:
+                # شرط خرید: مک‌دی ۴برابر صعودی + مک‌دی دیفالت اولین میله زیر صفر
+                if is_4x_bullish_cross and is_first_negative_bar:
                     if last_signal_time != current_time_label:
-                        send_telegram_message("🟢 **سیگنال خرید طلا (XAUUSD)**\n- تایم‌فریم: ۱۵ دقیقه\n- مک‌دی بالا (۴برابر): صعودی\n- مک‌دی پایین (دیفالت): اولین میله زیر صفر کامل بسته شد.")
+                        send_telegram_message("🟢 **سیگنال خرید طلا (XAUUSD)**\n- تایم‌فریم: ۱۵ دقیقه\n- مک‌دی ۴برابر: صعودی\n- مک‌دی دیفالت: اولین میله زیر صفر بسته شد.")
                         print("سیگنال خرید ارسال شد.", flush=True)
                         last_signal_time = current_time_label
                         
-                # سناریو فروش
-                elif is_4x_bearish and is_first_positive_bar:
+                # شرط فروش: مک‌دی ۴برابر نزولی + مک‌دی دیفالت اولین میله بالای صفر
+                elif is_4x_bearish_cross and is_first_positive_bar:
                     if last_signal_time != current_time_label:
-                        send_telegram_message("🔴 **سیگنال فروش طلا (XAUUSD)**\n- تایم‌فریم: ۱۵ دقیقه\n- مک‌دی بالا (۴برابر): نزولی\n- مک‌دی پایین (دیفالت): اولین میله بالای صفر کامل بسته شد.")
+                        send_telegram_message("🔴 **سیگنال فروش طلا (XAUUSD)**\n- تایم‌فریم: ۱۵ دقیقه\n- مک‌دی ۴برابر: نزولی\n- مک‌دی دیفالت: اولین میله بالای صفر بسته شد.")
                         print("سیگنال فروش ارسال شد.", flush=True)
                         last_signal_time = current_time_label
                         
