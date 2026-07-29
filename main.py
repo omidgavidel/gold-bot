@@ -5,7 +5,6 @@ import pandas as pd
 import yfinance as yf
 from flask import Flask
 
-# راه‌اندازی یک وب‌سرور کوچک برای فریب دادن ریلی و جلوگیری از Stopping Container
 app = Flask(name)
 
 @app.route('/')
@@ -83,10 +82,7 @@ def run_bot():
             time.sleep(60)
 
 if name == 'main':
-    # اجرای ربات در یک ترد جداگانه
     t = threading.Thread(target=run_bot)
     t.daemon = True
     t.start()
-    
-    # اجرای وب‌سرور برای نگه داشتن دائمی کانتینر روی پورت اختصاصی ریلی
     app.run(host='0.0.0.0', port=8080)
