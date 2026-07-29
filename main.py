@@ -21,14 +21,13 @@ def calculate_macd(series, fast, slow, signal):
     histogram = macd_line - signal_line
     return macd_line, signal_line, histogram
 
-print("ربات با موفقیت و بدون خطای وب‌سرور روشن شد...", flush=True)
-send_telegram_message("🟢 ربات ترید طلا بدون خطا استارت شد.")
+print("ربات با اصلاح دقیق منطق کندل‌ها استارت شد...", flush=True)
+send_telegram_message("🟢 ربات ترید طلا با منطق دقیقِ تطبیق با تریدینگ‌ویو روشن شد.")
 
 last_signal_time = None
 
 while True:
     try:
-        print("در حال بررسی بازار طلا...", flush=True)
         df = yf.download(tickers="GC=F", interval="15m", period="1d", progress=False, threads=False)
         
         if isinstance(df.columns, pd.MultiIndex):
@@ -40,6 +39,7 @@ while True:
             _, _, hist_def = calculate_macd(close, 12, 26, 9)
             macd_4x, sig_4x, _ = calculate_macd(close, 48, 104, 36)
             
+            # بررسی دقیق کندل بسته شده (iloc[-2]) و کندل ماقبل آن (iloc[-3])
             h_curr = hist_def.iloc[-2]
             h_prev = hist_def.iloc[-3]
             
@@ -49,8 +49,9 @@ while True:
             is_4x_bullish = m4_curr > s4_curr
             is_4x_bearish = m4_curr < s4_curr
             
-            is_first_negative_bar = (h_curr < 0) and (h_prev >= 0)
-            is_first_positive_bar = (h_curr > 0) and (h_prev <= 0)
+            # اصلاح شرط عبور از خط صفر برای تشخیص دقیق اولین میله
+            is_first_negative_bar = (h_curr < 0) and (h_prev > 0 or abs(h_prev) < 0.0001)
+            is_first_positive_bar = (h_curr > 0) and (h_prev < 0 or abs(h_prev) < 0.0001)
             
             current_time_label = str(df.index[-2])
             
@@ -69,5 +70,5 @@ while True:
         time.sleep(60)
         
     except Exception as e:
-        print(f"خطا در حلقه: {e}", flush=True)
+        print(f"خطا: {e}", flush=True)
         time.sleep(60)
